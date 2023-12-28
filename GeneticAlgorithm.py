@@ -1,108 +1,50 @@
 
 
-import random 
-POPULATION_SIZE = 100
-  
-# Valid genes 
-GENES = '''abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP 
-QRSTUVWXYZ 1234567890, .-;:_!"#%&/()=?@${[]}'''
+import numpy as np
 
-TARGET = "hemanth"
+# HELLO Problem Parameters
+target_string = "HELLO"
+string_length = len(target_string)
+population_size = 10000
+generations = 10
 
-  
-class Individual(object): 
-    def __init__(self, chromosome): 
-        self.chromosome = chromosome  
-        self.fitness = self.cal_fitness() 
-  
-    @classmethod
-    def mutated_genes(self): 
-        global GENES 
-        gene = random.choice(GENES) 
-        return gene 
-  
-    @classmethod
-    def create_gnome(self): 
-        global TARGET 
-        gnome_len = len(TARGET) 
-        return [self.mutated_genes() for _ in range(gnome_len)] 
-  
-    def mate(self, par2): 
-        child_chromosome = [] # chromosome for offspring 
-        for gp1, gp2 in zip(self.chromosome, par2.chromosome):                  
-            prob = random.random() # random probability  
-  
-            # if prob is less than 0.45, insert gene 
-            # from parent 1  
-            if prob < 0.45: 
-                child_chromosome.append(gp1) 
-  
-            # if prob is between 0.45 and 0.90, insert 
-            # gene from parent 2 
-            elif prob < 0.90: 
-                child_chromosome.append(gp2) 
-  
-            # otherwise insert random gene(mutate),  
-            # for maintaining diversity 
-            else: 
-                child_chromosome.append(self.mutated_genes()) 
-  
-        # create new Individual(offspring) using  
-        # generated chromosome for offspring 
-        return Individual(child_chromosome) 
-  
-    def cal_fitness(self): 
-        global TARGET 
-        fitness = 0
-        for gs, gt in zip(self.chromosome, TARGET): 
-            if gs != gt: fitness+= 1
-        return fitness 
-  
-# Driver code 
-def main(): 
-    global POPULATION_SIZE 
-    generation = 1 #current generation 
-    found = False
-    population = [] 
-  
-    # create initial population 
-    for _ in range(POPULATION_SIZE): 
-                gnome = Individual.create_gnome() 
-                population.append(Individual(gnome)) 
-  
-    while not found: 
-  
-        # sort the population in increasing order of fitness score 
-        population = sorted(population, key = lambda x:x.fitness) 
-  
-        # if the individual having lowest fitness score ie.  
-        # 0 then we know that we have reached to the target 
-        # and break the loop 
-        if population[0].fitness <= 0: 
-            found = True
-            break
+# Initialize Population
+population = np.random.choice(list("ABCDEFGHIJKLMNOPQRSTUVWXYZ "), size=(population_size, string_length))
 
-        new_generation = [] # Otherwise generate new offsprings for new generation 
-  
-        # Perform Elitism, that mean 10% of fittest population 
-        # goes to the next generation 
-        s = int((10*POPULATION_SIZE)/100) 
-        new_generation.extend(population[:s]) 
-  
-        # From 50% of fittest population, Individuals  
-        # will mate to produce offspring 
-        s = int((90*POPULATION_SIZE)/100) 
-        for _ in range(s): 
-            parent1 = random.choice(population[:50]) 
-            parent2 = random.choice(population[:50]) 
-            child = parent1.mate(parent2) 
-            new_generation.append(child) 
-        population = new_generation 
-  
-        print("Generation: {}\tString: {}\tFitness: {}".format(generation,"".join(population[0].chromosome),population[0].fitness)) 
-        generation += 1
-       
-    print("Generation: {}\tString: {}\tFitness: {}".format(generation,"".join(population[0].chromosome),population[0].fitness)) 
-  
-if __name__ == '__main__': 
-    main() 
+def fitness(chromosome):
+    return np.sum(chromosome == np.array(list(target_string)))
+
+# Genetic Algorithm Loop
+while True:
+    # Genetic Algorithm
+    for generation in range(generations):
+        # Evaluation
+        fitness_values = np.array([fitness(chromosome) for chromosome in population])
+
+        # Selection
+        selected_indices = np.argsort(fitness_values)[-population_size // 2:]
+        parents = population[selected_indices]
+
+        # Crossover
+        crossover_point = string_length // 2
+        offspring = np.concatenate([parents[:, :crossover_point], parents[:, crossover_point:]], axis=1)
+
+        # Mutation
+        mutation_rate = 0.1
+        mutation_mask = np.random.rand(*offspring.shape) < mutation_rate
+        offspring[mutation_mask] = np.random.choice(list("ABCDEFGHIJKLMNOPQRSTUVWXYZ "), size=np.sum(mutation_mask))
+
+        # Replacement
+        population[:population_size // 2] = offspring
+
+    # Final Evaluation
+    final_fitness_values = np.array([fitness(chromosome) for chromosome in population])
+    best_solution_index = np.argmax(final_fitness_values)
+    best_solution = ''.join(population[best_solution_index])
+
+    print("Best Solution:", best_solution)
+    print("Fitness:", np.max(final_fitness_values))
+
+    # Check if the best solution matches the target
+    if best_solution == target_string:
+        break
